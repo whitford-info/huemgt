@@ -1,0 +1,3 @@
+[huebridge]
+base_discovery_url = "https://discovery.meethue.com/"
+mdns_service_type = "_hue._tcp.local."
