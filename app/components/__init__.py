@@ -1,3 +1,3 @@
-from .HueBridgeComm import HueBridgeComm
+from .bridgecom import BridgeComm
 
-__all__ = ["HueBridgeComm"]
+__all__ = ["BridgeComm"]
