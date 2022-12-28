@@ -19,8 +19,8 @@ class HueBridgeFields:
     mac = Field(description="IP for the API.")
     base_url = Field(description="IP for the API.")
 
+
 class HueBridgeInputBase(BaseModel):
-    username: str = HueBridgeFields.username
     name: str = HueBridgeFields.name
     ip: IPv4Address = HueBridgeFields.ip
     all_ip_address: list[IPv4Address | IPv6Address] = HueBridgeFields.all_ip_address
@@ -28,4 +28,3 @@ class HueBridgeInputBase(BaseModel):
     port: int = HueBridgeFields.port
     model: str = HueBridgeFields.model
     mac: str = HueBridgeFields.mac
-    base_url: str = HueBridgeFields.base_url

@@ -1,1 +1,4 @@
-#!/usr/bin/env python
+from .hue_bridge import *
+from .lights import *
+
+__all__ = ["HueBridge", "Light"]

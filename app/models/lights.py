@@ -1,7 +1,9 @@
 from pydantic import Field, BaseModel, Extra
+from pydantic.typing import Optional, Union
+from app.models.enums import *
 from datetime import datetime
 
-__all__ = ["LightDataFields", "LightDataInputBase"]
+__all__ = ["LightDataFields", "LightDataInputBase", "SwitchDataInputBase"]
 
 
 class LightState(BaseModel):
@@ -20,6 +22,14 @@ class LightState(BaseModel):
     colormode: str = Field(description="", example="ct")
     mode: str = Field(description="Mode of the light.", example="homeautomation")
     reachable: bool = Field(description="Can the hue bridge access the light?")
+
+
+class SwitchState(LightState):
+    bri: Optional[int]
+    hue: Optional[int]
+    xy: Optional[list]
+    ct: Optional[int]
+    colormode: Optional[str]
 
 
 class LightSWUpdate(BaseModel):
@@ -73,25 +83,25 @@ class LightConfig(BaseModel):
 
 class LightDataFields:
     id = Field(description="This is the Id of the light.")
-    collection_time = Field(description="When this information was collected.", default_factory=datetime.now)
+    collection_time = Field(
+        description="When this information was collected.", default_factory=datetime.now
+    )
     state = Field(
         description="This field contains information related to the state of the light."
     )
     swupdate: LightSWUpdate = Field(
         description="Provides information related to the lights firmware updates."
     )
-    type = Field(description="The type of light.", example="Extended color light")
-    name = Field(
-        description="The user set name for the light.", example="Office Desk"
+    type: LightTypeEnum = Field(
+        description="The type of light.", example="Extended color light"
     )
+    name = Field(description="The user set name for the light.", example="Office Desk")
     modelid = Field(description="The Model ID", example="LCA007")
     manufacturername: str = Field(
         description="The manufacturers name.", example="Signify Netherlands B.V."
     )
     productname = Field(description="The product name.", example="Hue color lamp")
-    capabilities = Field(
-        description="Describes the capabilities of the lights."
-    )
+    capabilities = Field(description="Describes the capabilities of the lights.")
     config: LightConfig = Field(description="Describes the configuration of the light.")
     uniqueid = Field(
         description="The unique id of the light.", example="00:17:88:01:0c:6d:be:66-0b"
@@ -99,9 +109,7 @@ class LightDataFields:
     swversion = Field(
         description="Current software version of the light.", example="1.93.11"
     )
-    swconfigid = Field(
-        description="Software configuration ID.", example="47270DB8"
-    )
+    swconfigid = Field(description="Software configuration ID.", example="47270DB8")
     productid = Field(
         description="Full Product ID.", example="Philips-LCA007-1-A19HECLv1"
     )
@@ -112,7 +120,7 @@ class LightDataInputBase(BaseModel):
     collection_time: datetime = LightDataFields.collection_time
     state: LightState = LightDataFields.state
     swupdate: LightSWUpdate = LightDataFields.swupdate
-    type: str = LightDataFields.type
+    type: LightTypeEnum = LightDataFields.type
     name: str = LightDataFields.name
     modelid: str = LightDataFields.modelid
     manufacturername: str = LightDataFields.manufacturername
@@ -129,3 +137,27 @@ class LightDataInputBase(BaseModel):
         # arbitrary_types_allowed = True  # required for the _id
         # json_encoders = {ObjectId: str}
         extra = Extra.forbid
+
+
+class SwitchDataInputBase(BaseModel):
+    id: int = LightDataFields.id
+    collection_time: datetime = LightDataFields.collection_time
+    state: SwitchState = LightDataFields.state
+    swupdate: LightSWUpdate = LightDataFields.swupdate
+    type: LightTypeEnum = LightDataFields.type
+    name: str = LightDataFields.name
+    modelid: str = LightDataFields.modelid
+    manufacturername: str = LightDataFields.manufacturername
+    productname: str = LightDataFields.productname
+    capabilities: LightCapabilities = LightDataFields.capabilities
+    config: LightConfig = LightDataFields.config
+    uniqueid: str = LightDataFields.uniqueid
+    swversion: str = LightDataFields.swversion
+    swconfigid: str = LightDataFields.swconfigid
+    productid: str = LightDataFields.productid
+
+    class Config:
+        allow_population_by_field_name = True
+        # arbitrary_types_allowed = True  # required for the _id
+        # json_encoders = {ObjectId: str}
+        extra = Extra.allow

@@ -1,5 +1,7 @@
 import json
+from logging import getLogger
 import requests
+from pydantic import ValidationError
 from urllib.parse import urlencode
 from os import environ
 from ipaddress import IPv4Address
@@ -8,8 +10,11 @@ from zeroconf import Zeroconf, ServiceBrowser, ServiceListener, IPVersion
 
 from app.models import HueBridgeInputBase
 from app.models.enums import RequestMethodEnum
+from app.api import HueBridge
 
-__all__ = ["BridgeComm"]
+__all__ = ["HueBridgeSetup"]
+
+log = getLogger("hbridge")
 
 
 class BridgeDiscoveryListener(ServiceListener):
@@ -22,10 +27,10 @@ class BridgeDiscoveryListener(ServiceListener):
         self.name.append(name)
 
 
-class BridgeComm:
+class HueBridgeSetup:
 
     """
-    This will deal with storing the bridges and dealing with the requests to the API endpoints.
+    This will deal with setting up each of the bridge objects.
 
     """
 
@@ -59,7 +64,7 @@ class BridgeComm:
             self.id = res_body["id"]
             self.bridge_ip = res_body["internalipaddress"]
 
-    def discover_bridge_units(self) -> list[HueBridgeInputBase]:
+    def discover_bridge_units(self) -> list[HueBridge]:
         """
         This method will discover any Hue Bridges that are on the network via the mDNS service. This method will return
         a list of the HueBridgeUnits dataclass, which contain all the useful information about the bridge unit.
@@ -82,48 +87,25 @@ class BridgeComm:
                 bridge_ip = IPv4Address(
                     bridges.parsed_addresses(version=IPVersion.V4Only)[0]
                 )
-                base_url = f"http://{str(bridge_ip)}/api/{self.user_name}/"
-                print(base_url)
-                bridge_unit_data = HueBridgeInputBase(
-                    username=self.user_name,
-                    name=item,
-                    ip=bridge_ip,
-                    all_ip_address=bridges.parsed_addresses(),
-                    port=bridges.port,
-                    bridge_type=bridges.type,
-                    model=bridges.properties.get("modelid".encode("utf-8")).decode(
-                        "utf-8"
-                    ),
-                    mac=bridges.properties.get("bridgeid".encode("utf-8")).decode(
-                        "utf-8"
-                    ),
-                    base_url=base_url
-                )
-                self.bridge_units.append(bridge_unit_data)
+
+                try:
+                    valid_bridge_unit = HueBridgeInputBase(
+                        name=item,
+                        ip=bridge_ip,
+                        all_ip_address=bridges.parsed_addresses(),
+                        port=bridges.port,
+                        bridge_type=bridges.type,
+                        model=bridges.properties.get("modelid".encode("utf-8")).decode(
+                            "utf-8"
+                        ),
+                        mac=bridges.properties.get("bridgeid".encode("utf-8")).decode(
+                            "utf-8"
+                        ),
+                    )
+                except ValidationError as err:
+                    log.error(err)
+                    raise err
+                else:
+                    self.bridge_units.append(HueBridge(**valid_bridge_unit.dict()))
 
         return self.bridge_units
-
-    # TODO: Perhaps API Communication should be seperated MORE from discovery and creation.
-    def _base_api_request(
-        self,
-        target_bridge: HueBridgeInputBase,
-        endpoint: str,
-        method: RequestMethodEnum,
-        device: str | list | int = None,
-    ) -> requests.Response:
-
-        full_url = f"{target_bridge.base_url}{endpoint}/{device}/"
-        try:
-            match method:
-                case "GET":
-                    response = requests.get(url=full_url
-            )
-
-        except requests.exceptions.HTTPError as err:
-            raise err
-        else:
-            return response
-
-    def api_get(self, target_bridge: HueBridgeInputBase, endpoint: str, device: int = None):
-        response = self._base_api_request(target_bridge=target_bridge, endpoint=endpoint, device=device, method="GET")
-        return response.json()
